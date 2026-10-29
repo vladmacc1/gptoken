@@ -12,7 +12,7 @@ results; unchecked items are not implied to have passed.
 - [x] Frozen self-test and interactive GUI check on release binary.
 - [x] Installer first install and update; wrong-directory rejection (isolated QA mode).
 - [x] Approved removal test preserves user/unknown files in candidate-03; candidate-04 removal not repeated.
-- [ ] GitHub CI successful for exact pushed revision.
+- [x] Windows CI successful for revision `a7cc017856028d772fb0136f5c2e3f771f0227b6`: [run 40926148832](https://github.com/vladmacc1/gptoken/actions/runs/40926148832).
 - [ ] Clean Windows 10 and Windows 11 user testing without developer Python.
 - [x] Microsoft Defender scan recorded for exact installer hash.
 - [x] Code-signing status recorded; unsigned publisher disclosed.
