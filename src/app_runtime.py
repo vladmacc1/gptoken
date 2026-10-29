@@ -11,7 +11,7 @@ import time
 
 APP_ID = "VLADMACC.CodexUsageWidget"
 APP_NAME = "Codex Usage Widget"
-VERSION = "5.1.0"
+VERSION = "5.1.1"
 RESOURCE_DIR = Path(__file__).resolve().parent
 
 

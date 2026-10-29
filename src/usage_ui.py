@@ -628,7 +628,9 @@ class Widget:
                 self.bar_render_keys[index] = key
                 if index == 0:
                     self.bar_photo, self.display_remaining = photo, value
-        self.root.after(50 if motion else 150, self.animate)
+        # Account for rendering time so active motion stays close to 30 fps.
+        elapsed_ms = int((time.monotonic() - now) * 1000)
+        self.root.after(max(1, 33 - elapsed_ms) if motion else 150, self.animate)
 
     def receive(self):
         changed = False
@@ -712,7 +714,7 @@ class Widget:
     def report(self):
         self.last_report = time.monotonic()
         report = {
-            "version": getattr(self.api, "VERSION", "5.1.0"),
+            "version": getattr(self.api, "VERSION", "5.1.1"),
             "activityEnabled": self.activity_enabled,
             "profile": self.profile,
             "cached": self.cached,
