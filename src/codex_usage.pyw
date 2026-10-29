@@ -43,6 +43,7 @@ def save_json(path, value):
 
 from usage_transport import AccountClient, fetch_loop as transport_loop
 from usage_activity import ActivityMonitor
+from usage_service_status import status_loop
 
 ACTIVITY = threading.Event()
 
@@ -83,6 +84,7 @@ def fetch_loop():
         return AccountClient(executable, BASE, STOP)
 
     threading.Thread(target=watch_activity, daemon=True).start()
+    threading.Thread(target=status_loop, args=(STOP, UPDATES), daemon=True).start()
     transport_loop(
         STOP,
         REFRESH,

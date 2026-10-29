@@ -9,6 +9,7 @@ import queue
 import threading
 import time
 import tkinter as tk
+import webbrowser
 
 from PIL import Image, ImageDraw, ImageTk
 from usage_pace import COLORS, PaceHistory, quota_band
@@ -30,7 +31,8 @@ from usage_appearance import (
     widget_size,
     chart_explanation,
 )
-from usage_presenter import render_static, render_bar_spec
+from usage_presenter import render_static, render_bar_spec, service_color
+from usage_service_status import initial_state, presentation as service_presentation
 
 
 class Widget:
@@ -86,6 +88,8 @@ class Widget:
         self.cached = True
         self.refresh_state = "loading"
         self.activity = {"active": False, "available": False, "checkedAt": 0}
+        self.service_status = initial_state()
+        self.service_button_key = None
         self.quota_pulse_until = 0
         self.last_render_key = None
         cached = self.read_json(api.BASE / "quota-cache.json", {})
@@ -228,6 +232,24 @@ class Widget:
         for button in self.header_buttons.values():
             button.destroy()
         self.header_buttons, self.header_images = {}, {}
+        self.service_button_key = None
+        status = tk.Button(
+            self.canvas,
+            command=self.toggle_service_status,
+            bg=self.BG,
+            activebackground=self.HOVER,
+            bd=0,
+            highlightthickness=0,
+            relief="flat",
+            cursor="hand2",
+            takefocus=True,
+        )
+        if self.profile == "mini":
+            status.place(x=5, y=5, width=10, height=10)
+        else:
+            status.place(x=8, y=16, width=20, height=20)
+        self.header_buttons["service_status"] = status
+        self.update_service_indicator()
         if self.profile == "mini":
             return
         # Native Tk buttons receive the click themselves, independently of dragging the canvas.
@@ -260,6 +282,62 @@ class Widget:
             button.bind("<Enter>", self.control_enter)
             button.bind("<Leave>", self.schedule_leave)
             self.header_buttons[name], self.header_images[name] = button, photo
+
+    def update_service_indicator(self):
+        state = service_presentation(self.service_status)["state"]
+        key = (state, self.theme, self.profile)
+        if self.service_button_key == key:
+            return
+        size = 10 if self.profile == "mini" else 20
+        center, radius = size // 2, 3 if self.profile == "mini" else 4
+        image = Image.new("RGBA", (size, size), self.BG)
+        ImageDraw.Draw(image).ellipse(
+            (center - radius, center - radius, center + radius, center + radius),
+            fill=service_color(self.theme, state),
+        )
+        photo = ImageTk.PhotoImage(image)
+        self.header_images["service_status"] = photo
+        self.header_buttons["service_status"].configure(image=photo)
+        self.service_button_key = key
+
+    def toggle_service_status(self):
+        if self.popup_kind == "service_status":
+            self.close_popup()
+            return
+        frame, _, _ = self.panel("service_status", "Статус сервисов ChatGPT", width=320, height=370)
+        self.service_label = tk.Label(
+            frame,
+            bg=self.PANEL,
+            fg=self.FG,
+            font=(FONT_FAMILY, -12),
+            justify="left",
+            anchor="nw",
+            wraplength=286,
+        )
+        self.service_label.pack(fill="x", pady=(8, 12))
+        self.button(
+            frame,
+            "Открыть status.openai.com ↗",
+            lambda: webbrowser.open("https://status.openai.com/"),
+            key="status_site",
+        )
+        self.update_service_panel()
+
+    def update_service_panel(self):
+        if self.popup_kind != "service_status":
+            return
+        view = service_presentation(self.service_status)
+        checked = self.service_status.get("checkedAt")
+        stamp = datetime.fromtimestamp(checked).strftime("%H:%M:%S") if checked else "ожидаем"
+        self.service_label.configure(
+            text=(
+                f"{view['label']}\n{view['detail']}\n\n"
+                f"Последняя проверка: {stamp}\n"
+                "Опрос каждые 5 минут. При ошибке — через 10, затем 15 минут.\n"
+                "Расход: 0 модельных токенов.\n\n"
+                "Это опубликованный общий статус. Он может запаздывать и не отражать проблему вашего аккаунта."
+            )
+        )
 
     def control_enter(self, event=None):
         if self.leave_after:
@@ -472,7 +550,9 @@ class Widget:
             activity=self.activity_text(),
             now=now,
             period=self.period,
+            service_state=service_presentation(self.service_status)["state"],
         )
+        self.update_service_indicator()
         self.static_photo = ImageTk.PhotoImage(self.rendered_frame.image)
         self.canvas.itemconfigure(self.background_item, image=self.static_photo)
         for index, spec in enumerate(self.rendered_frame.bars):
@@ -558,6 +638,10 @@ class Widget:
             except queue.Empty:
                 break
             kind = result.get("kind", "quota")
+            if kind == "service_status":
+                self.service_status = result
+                changed = True
+                continue
             if kind == "activity":
                 changed = changed or self.activity.get("active") != result.get("active")
                 self.activity = result
@@ -605,6 +689,7 @@ class Widget:
             changed = True
         if changed:
             self.draw()
+            self.update_service_panel()
             self.report()
             if self.popup_kind == "details":
                 self.update_details()
@@ -614,6 +699,7 @@ class Widget:
 
     def tick(self):
         self.draw()
+        self.update_service_panel()
         if self.pending_notice and not self.popup:
             message, self.pending_notice = self.pending_notice, None
             self.show_notice(message)
@@ -645,6 +731,10 @@ class Widget:
             "popupKind": self.popup_kind,
             "popupMapped": bool(self.popup and self.popup.winfo_ismapped()),
             "activity": self.activity,
+            "serviceStatus": {
+                **self.service_status,
+                "displayState": service_presentation(self.service_status)["state"],
+            },
             "visualMode": visual_mode(
                 self.mode, self.activity, self.quota_pulse_until, time.time(), valid=not self.cached and not self.failed
             ),

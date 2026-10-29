@@ -28,7 +28,24 @@ class Frame:
     text_boxes: list
 
 
-def render_static(style, theme, profile, rows, plan=None, history=False, sync="", activity="", now=0, period=3600):
+def service_color(theme, state):
+    palette = THEMES.get(theme, THEMES["dark"])
+    return palette[{"operational": "green", "degraded": "yellow", "outage": "red"}.get(state, "dim")]
+
+
+def render_static(
+    style,
+    theme,
+    profile,
+    rows,
+    plan=None,
+    history=False,
+    sync="",
+    activity="",
+    now=0,
+    period=3600,
+    service_state="unknown",
+):
     p = THEMES.get(theme, THEMES["dark"])
     width, height = widget_size(style, profile, len(rows) > 1, history)
     im = Image.new("RGBA", (width, height))
@@ -89,6 +106,7 @@ def render_static(style, theme, profile, rows, plan=None, history=False, sync=""
             text(x + 32, y + h / 2, "Ждём измерения", 10, p["dim"], max_width=w - 32)
 
     if profile == "mini":
+        d.ellipse((7, 7, 13, 13), fill=service_color(theme, service_state))
         count = len(rows)
         for i, row in enumerate(rows):
             center = 30 if count == 1 else (18, 42)[i]
@@ -110,7 +128,8 @@ def render_static(style, theme, profile, rows, plan=None, history=False, sync=""
         return Frame(im, bars, boxes)
 
     title = "Codex" + (" · Plus" if plan == "plus" else " · Pro" if plan == "pro" else "")
-    text(18, 26, title, 16, bold=True, max_width=width - 114)
+    d.ellipse((14, 22, 22, 30), fill=service_color(theme, service_state))
+    text(34, 26, title, 16, bold=True, max_width=width - 130)
     # The preview and real native header buttons use the same centres.
     for dx in (-6, 0, 6):
         d.ellipse((width - 28 + dx - 1, 25, width - 28 + dx + 1, 27), fill=p["muted"])

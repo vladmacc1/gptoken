@@ -3,6 +3,7 @@
 import hashlib
 from pathlib import Path
 import queue
+import ssl
 import sys
 import time
 from app_runtime import RESOURCE_DIR, VERSION, write_json
@@ -16,6 +17,7 @@ def self_test(report, data_dir):
 
     logo = RESOURCE_DIR / "assets" / "vladmacc-logo.png"
     Image.open(logo).verify()
+    ssl.create_default_context()
     count = 0
     for style in ("minimal", "telemetry", "compact"):
         for theme in ("dark", "light"):
@@ -39,6 +41,7 @@ def self_test(report, data_dir):
         "frozen": bool(getattr(sys, "frozen", False)),
         "python": sys.version.split()[0],
         "tcl": tkinter.TclVersion,
+        "openssl": ssl.OPENSSL_VERSION,
         "renderedCombinations": count,
         "logoSha256": hashlib.sha256(logo.read_bytes()).hexdigest(),
         "modelCallsAllowed": "turn/start" in AccountClient.ALLOWED_METHODS,
@@ -102,9 +105,40 @@ def smoke_test(api, report):
                 pump(0.05)
                 assert widget.theme == theme and widget.ui_style == style
         menu_checks = 0
+        service_checks = 0
         for profile in ("horizontal", "square", "detailed", "mini"):
             widget.apply_preferences({"profile": profile})
             pump(0.05)
+            for state in ("operational", "degraded", "outage", "unknown"):
+                api.UPDATES.put(
+                    {
+                        "kind": "service_status",
+                        "state": state,
+                        "checkedAt": now,
+                        "lastSuccessAt": now,
+                        "detail": "Тестовые данные",
+                    }
+                )
+                pump(0.12)
+                assert widget.service_button_key[0] == state
+                widget.header_buttons["service_status"].event_generate("<Enter>")
+                assert widget.popup is None
+                widget.header_buttons["service_status"].invoke()
+                pump(0.03)
+                assert widget.popup_kind == "service_status" and widget.popup.winfo_viewable()
+                assert "0 модельных токенов" in widget.service_label.cget("text")
+                site_button = widget.panel_buttons["status_site"]
+                assert (
+                    site_button.winfo_rooty() + site_button.winfo_height()
+                    <= widget.popup.winfo_rooty() + widget.popup.winfo_height()
+                )
+                assert (
+                    widget.popup.winfo_x() >= widget.root.winfo_x() + widget.WIDTH
+                    or widget.popup.winfo_x() + widget.popup.winfo_width() <= widget.root.winfo_x()
+                )
+                widget.header_buttons["service_status"].invoke()
+                assert widget.popup is None
+                service_checks += 1
             if profile == "mini":
                 widget.canvas.event_generate("<Button-3>", x=20, y=20)
             else:
@@ -157,6 +191,8 @@ def smoke_test(api, report):
                 "menuHoverOpens": False,
                 "sidePlacement": True,
                 "nativeRefresh": True,
+                "serviceStatusCases": service_checks,
+                "serviceStatusModelCalls": False,
                 "localActivityDefault": widget.activity_enabled,
                 "callbackErrors": errors,
             },

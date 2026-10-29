@@ -1,6 +1,6 @@
 # Public release gate
 
-Status: **local release candidate verified**. See [dated QA report](QA-2026-10-29.md) for measured
+Status: **updated local release candidate under verification**. See [current QA report](QA-STATUS-2026-10-29.md) and [earlier QA report](QA-2026-10-29.md) for measured
 results; unchecked items are not implied to have passed.
 
 - [x] Owner chose proprietary freeware terms; VLADMACC attribution/logo retained.

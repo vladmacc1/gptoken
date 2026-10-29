@@ -1,12 +1,19 @@
 # Windows release build
 
-Build on Windows x64 using **CPython 3.12.14**, NSIS 3.13 and the pinned Python
+Build on Windows x64 using **CPython 3.14.10**, NSIS 3.13 and the pinned Python
 build dependencies. These tools are free. No code-signing certificate is included.
 The source license remains proprietary; build instructions do not grant a
 separate right to distribute modified builds.
 
+CI pins Python 3.14.10 x64, which has a Windows artifact in the official
+[actions/python-versions manifest](https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json).
+Python 3.12.14 has no Windows artifact there and cannot be installed by
+`actions/setup-python` on a Windows runner. [Pillow 13](https://pillow.readthedocs.io/en/stable/installation/python-support.html)
+and [PyInstaller 6.22.3](https://github.com/pyinstaller/pyinstaller/blob/v6.22.3/pyproject.toml)
+support Python 3.14. Recheck manifest availability before changing this pin.
+
 ```powershell
-py -3.12 -m venv .venv
+py -3.14 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
 .\.venv\Scripts\python.exe scripts/check.py
 .\.venv\Scripts\python.exe -m pip_audit -r requirements.txt --no-deps --disable-pip
@@ -28,6 +35,16 @@ Outputs: per-user NSIS setup EXE, portable ZIP, SHA256SUMS.txt. The ZIP includes
 the whole `CodexUsageWidget` directory; do not distribute its EXE alone.
 Build output is excluded from Git. `requirements-build.lock` records resolved
 tool versions; matching versions do not guarantee bit-identical PE/ZIP bytes.
+Use the same Python patch version to reproduce the CI build locally. The local
+candidate uses Python 3.12.14; its checks apply only to that candidate's
+exact files. The Python 3.14.10 CI candidate needs its own frozen, GUI and installer
+checks. Neither candidate's results validate the other runtime or artifact.
+
+The local Python 3.12.14 build environment reports OpenSSL 3.5.8, with matching
+`libssl-3-x64.dll` and `libcrypto-3-x64.dll`. The HTTP status reader imports `ssl`,
+so inspect the frozen package for these runtime dependencies and ship the matching
+license from `packaging/licenses`. This local inspection does not establish the
+OpenSSL version or complete bundled-notice set of the Python 3.14.10 CI package.
 
 ## Offline executable checks
 

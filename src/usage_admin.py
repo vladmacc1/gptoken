@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 from usage_appearance import STYLES, THEMES, PROFILE_NAMES, FONT_FAMILY, FONT_SEMIBOLD, chart_explanation
 from usage_presenter import render_static, compose_preview, demo_rows
 from usage_analytics import MOSCOW
+from usage_service_status import presentation as service_presentation
 
 
 class SettingsPanel:
@@ -290,6 +291,7 @@ class SettingsPanel:
             activity=self.owner.activity_text() if example == "account" else "Пример",
             now=now,
             period=self.owner.period,
+            service_state=service_presentation(self.owner.service_status)["state"],
         )
         image = compose_preview(self.preview_frame)
         self.window.update_idletasks()
@@ -386,6 +388,7 @@ class SettingsPanel:
             "Последнее измерение: "
             + (datetime.fromtimestamp(updated, MOSCOW).strftime("%d.%m %H:%M:%S") if updated else "ожидаем"),
             "Фоновая работа: 0 модельных токенов",
+            service_presentation(self.owner.service_status)["label"] + " · опрос каждые 5 минут",
             "",
         ]
         for row in self.owner.presentation_rows(False):
