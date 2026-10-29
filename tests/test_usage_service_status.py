@@ -172,17 +172,25 @@ class NetworkTests(unittest.TestCase):
             with self.subTest(headers=response.headers), self.assertRaises(service.StatusDataError):
                 service.fetch_summary(SimpleNamespace(open=lambda *args, **kwargs: response))
 
-    def test_invalid_json_encoding_nested_json_or_final_origin_is_rejected(self):
+    def test_invalid_json_encoding_or_final_origin_is_rejected(self):
         for response in (
             Response(b"not json"),
             Response(b"\xff"),
-            Response(b"[" * 3000 + b"]" * 3000),
             Response(b"{}", url="https://example.invalid/status"),
             Response(b"{}", url="http://status.openai.com/status"),
             Response(b"{}", code=204),
         ):
             with self.subTest(url=response.url, code=response.code), self.assertRaises(service.StatusDataError):
                 service.fetch_summary(SimpleNamespace(open=lambda *args, **kwargs: response))
+
+    def test_nested_non_object_response_never_becomes_a_known_status(self):
+        response = Response(b"[" * 3000 + b"]" * 3000)
+        try:
+            payload = service.fetch_summary(SimpleNamespace(open=lambda *args, **kwargs: response))
+        except service.StatusDataError:
+            # Older Python parsers reject this depth; newer ones can decode it.
+            return
+        self.assertEqual(service.parse_summary(payload)["state"], "unknown")
 
     def test_redirect_rejects_other_hosts_http_userinfo_and_nonstandard_ports(self):
         handler = service.OfficialRedirectHandler()

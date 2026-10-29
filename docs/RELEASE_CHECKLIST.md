@@ -1,6 +1,6 @@
 # Public release gate
 
-Status: **updated local release candidate under verification**. See [current QA report](QA-STATUS-2026-10-29.md) and [earlier QA report](QA-2026-10-29.md) for measured
+Status: **updated local release candidate verified; public release pending**. See [current QA report](QA-STATUS-2026-10-29.md) and [earlier QA report](QA-2026-10-29.md) for measured
 results; unchecked items are not implied to have passed.
 
 - [x] Owner chose proprietary freeware terms; VLADMACC attribution/logo retained.
@@ -11,7 +11,7 @@ results; unchecked items are not implied to have passed.
 - [x] Source checks and runtime dependency audit on candidate source.
 - [x] Frozen self-test and interactive GUI check on release binary.
 - [x] Installer first install and update; wrong-directory rejection (isolated QA mode).
-- [x] Approved removal test preserves user/unknown files.
+- [x] Approved removal test preserves user/unknown files in candidate-03; candidate-04 removal not repeated.
 - [ ] GitHub CI successful for exact pushed revision.
 - [ ] Clean Windows 10 and Windows 11 user testing without developer Python.
 - [x] Microsoft Defender scan recorded for exact installer hash.
