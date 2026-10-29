@@ -35,16 +35,20 @@ Outputs: per-user NSIS setup EXE, portable ZIP, SHA256SUMS.txt. The ZIP includes
 the whole `CodexUsageWidget` directory; do not distribute its EXE alone.
 Build output is excluded from Git. `requirements-build.lock` records resolved
 tool versions; matching versions do not guarantee bit-identical PE/ZIP bytes.
-Use the same Python patch version to reproduce the CI build locally. The local
-candidate uses Python 3.12.14; its checks apply only to that candidate's
-exact files. The Python 3.14.10 CI candidate needs its own frozen, GUI and installer
-checks. Neither candidate's results validate the other runtime or artifact.
+Local candidate 05 and the CI recipe both target Python 3.14.10 x64. The inspected
+local interpreter reports OpenSSL 3.5.9 and Tcl 9.0.4; its OpenSSL and Tcl/Tk DLL
+versions agree. Candidate 04 used Python 3.12.14 / OpenSSL 3.5.8, is superseded,
+and must not be distributed. Keep its files and reports only as development history.
+Local and CI outputs are separate artifacts and each needs its own frozen, GUI
+and installer checks; matching runtime versions do not transfer those results.
 
-The local Python 3.12.14 build environment reports OpenSSL 3.5.8, with matching
-`libssl-3-x64.dll` and `libcrypto-3-x64.dll`. The HTTP status reader imports `ssl`,
-so inspect the frozen package for these runtime dependencies and ship the matching
-license from `packaging/licenses`. This local inspection does not establish the
-OpenSSL version or complete bundled-notice set of the Python 3.14.10 CI package.
+The HTTP status reader imports `ssl`. Verify that each frozen package contains
+the intended `libssl-3.dll` and `libcrypto-3.dll` versions, plus the matching
+licenses. `packaging/licenses/Python-3.14.10-Windows.txt` preserves the complete
+`LICENSE.txt` from the inspected Windows distribution, in addition to the CPython
+source license and separate OpenSSL 3.5.9 / Tcl 9.0.4 / Tk 9.0.4 terms. Earlier
+notice files remain in the repository. Inspect the actual CI package's runtime
+and notices rather than assuming they match the local build.
 
 ## Offline executable checks
 
