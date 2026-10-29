@@ -1,0 +1,57 @@
+name: Windows checks and installer
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12.14'
+          architecture: x64
+      - name: Install pinned build dependencies
+        run: python -m pip install -r requirements-build.lock
+      - name: Source checks
+        env:
+          PYTHONUTF8: '1'
+        run: python scripts/check.py
+      - name: Runtime dependency audit
+        run: python -m pip_audit -r requirements.txt --no-deps --disable-pip --format json --output dependency-audit.json
+      - name: Fetch verified installer compiler
+        run: python scripts/fetch_nsis.py --out nsis-tool
+      - name: Build package and installer
+        run: python scripts/build_windows.py --out release-output --nsis nsis-tool/nsis-3.13/makensis.exe
+      - name: Packaged offline check
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'release-output/payload/CodexUsageWidget/CodexUsageWidget.exe'
+          $report = Join-Path $PWD 'release-output/packaged-self-test.json'
+          $process = Start-Process -FilePath $exe -ArgumentList @('--self-test', $report) -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Packaged self-test failed' }
+          if (-not (Test-Path $report)) { throw 'Packaged self-test report missing' }
+          $result = Get-Content $report -Raw | ConvertFrom-Json
+          if (-not $result.ok -or -not $result.frozen) { throw 'Invalid packaged self-test result' }
+      - name: Retain candidate artifacts (no public release)
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: GPTOKEN-windows-x64-candidate
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            release-output/GPTOKEN-*.exe
+            release-output/GPTOKEN-*.zip
+            release-output/SHA256SUMS.txt
+            release-output/packaged-self-test.json
+            dependency-audit.json

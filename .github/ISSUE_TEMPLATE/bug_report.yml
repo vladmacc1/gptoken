@@ -1,0 +1,22 @@
+name: Ошибка
+description: Сообщить об ошибке без личных данных
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Версия приложения и Windows
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги, ожидаемый и фактический результат
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Приватность
+      options:
+        - label: В сообщении нет авторизации, токенов, текстов чатов и личной истории.
+          required: true
